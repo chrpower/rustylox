@@ -1,3 +1,5 @@
+mod scanner;
+mod token;
 use std::io::{self, Write};
 
 fn main() {
@@ -15,7 +17,6 @@ fn main() {
 fn run_file(path: &str) {
     match std::fs::read_to_string(path) {
         Ok(contents) => {
-            println!("Running file: {}", path);
             run(&contents);
         }
         Err(e) => {
@@ -26,13 +27,14 @@ fn run_file(path: &str) {
 }
 
 fn run_prompt() {
-    println!("Running prompt. Press Ctrl+C to exit.");
     loop {
         print!("> ");
         io::stdout().flush().unwrap();
         let mut input = String::new();
         match io::stdin().read_line(&mut input) {
-            Ok(_) => run(input.trim()),
+            Ok(_) => {
+                run(input.trim());
+            }
             Err(e) => {
                 eprintln!("Error reading input: {}", e);
                 std::process::exit(1);
@@ -42,5 +44,7 @@ fn run_prompt() {
 }
 
 fn run(source: &str) {
-    println!("Running source: {}", source);
+    for token in scanner::scan_tokens(source) {
+        println!("{:?}", token);
+    }
 }

@@ -1,7 +1,8 @@
 use crate::token::Token;
 
-pub fn scan_tokens(source: &str) -> Vec<Token> {
+pub fn scan_tokens(source: &str) -> Result<Vec<Token>, Vec<String>> {
     let mut tokens = Vec::new();
+    let mut errors = Vec::new();
     let line = 1;
     let mut chars = source.char_indices();
 
@@ -57,7 +58,7 @@ pub fn scan_tokens(source: &str) -> Vec<Token> {
                 literal: None,
                 line,
             }),
-            _ => todo!(),
+            _ => errors.push(format!("Unexpected character: {} on line {}", c, line)),
         }
     }
 
@@ -66,5 +67,9 @@ pub fn scan_tokens(source: &str) -> Vec<Token> {
         literal: None,
         line,
     });
-    tokens
+
+    if errors.len() > 0 {
+        return Err(errors);
+    }
+    Ok(tokens)
 }

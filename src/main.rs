@@ -44,7 +44,17 @@ fn run_prompt() {
 }
 
 fn run(source: &str) {
-    for token in scanner::scan_tokens(source) {
-        println!("{:?}", token);
+    match scanner::scan_tokens(source) {
+        Ok(tokens) => {
+            for token in tokens {
+                println!("{:?}", token);
+            }
+        }
+        Err(errors) => {
+            for error in errors {
+                eprintln!("{}", error);
+            }
+            std::process::exit(1);
+        }
     }
 }

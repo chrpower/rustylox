@@ -1,5 +1,6 @@
 #[derive(Debug)]
 pub enum Token<'a> {
+    // Single-character tokens.
     LeftParen {
         lexeme: &'a str,
         literal: Option<&'a str>,
@@ -46,6 +47,48 @@ pub enum Token<'a> {
         line: usize,
     },
     Star {
+        lexeme: &'a str,
+        literal: Option<&'a str>,
+        line: usize,
+    },
+
+    // One or two character tokens.
+    Bang {
+        lexeme: &'a str,
+        literal: Option<&'a str>,
+        line: usize,
+    },
+    BangEqual {
+        lexeme: &'a str,
+        literal: Option<&'a str>,
+        line: usize,
+    },
+    Equal {
+        lexeme: &'a str,
+        literal: Option<&'a str>,
+        line: usize,
+    },
+    EqualEqual {
+        lexeme: &'a str,
+        literal: Option<&'a str>,
+        line: usize,
+    },
+    Greater {
+        lexeme: &'a str,
+        literal: Option<&'a str>,
+        line: usize,
+    },
+    GreaterEqual {
+        lexeme: &'a str,
+        literal: Option<&'a str>,
+        line: usize,
+    },
+    Less {
+        lexeme: &'a str,
+        literal: Option<&'a str>,
+        line: usize,
+    },
+    LessEqual {
         lexeme: &'a str,
         literal: Option<&'a str>,
         line: usize,

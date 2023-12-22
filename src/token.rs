@@ -46,6 +46,11 @@ pub enum Token<'a> {
         literal: Option<&'a str>,
         line: usize,
     },
+    Slash {
+        lexeme: &'a str,
+        literal: Option<&'a str>,
+        line: usize,
+    },
     Star {
         lexeme: &'a str,
         literal: Option<&'a str>,

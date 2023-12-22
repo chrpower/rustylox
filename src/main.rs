@@ -33,7 +33,7 @@ fn run_prompt() {
         let mut input = String::new();
         match io::stdin().read_line(&mut input) {
             Ok(_) => {
-                run(input.trim());
+                run(&input);
             }
             Err(e) => {
                 eprintln!("Error reading input: {}", e);

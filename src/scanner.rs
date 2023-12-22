@@ -1,10 +1,9 @@
 use crate::token::Token;
 
-
 pub fn scan_tokens(source: &str) -> Result<Vec<Token>, Vec<String>> {
     let mut tokens = Vec::new();
     let mut errors = Vec::new();
-    let line = 1;
+    let mut line = 1;
     let mut chars = source.char_indices().peekable();
 
     while let Some((idx, c)) = chars.next() {
@@ -60,8 +59,7 @@ pub fn scan_tokens(source: &str) -> Result<Vec<Token>, Vec<String>> {
                 line,
             }),
             '!' => {
-                let next = chars.peek();
-                if let Some((_, '=')) = next {
+                if let Some((_, '=')) = chars.peek() {
                     chars.next();
                     tokens.push(Token::BangEqual {
                         lexeme: &source[idx..idx + 2],
@@ -77,8 +75,7 @@ pub fn scan_tokens(source: &str) -> Result<Vec<Token>, Vec<String>> {
                 }
             }
             '=' => {
-                let next = chars.peek();
-                if let Some((_, '=')) = next {
+                if let Some((_, '=')) = chars.peek() {
                     chars.next();
                     tokens.push(Token::EqualEqual {
                         lexeme: &source[idx..idx + 2],
@@ -94,8 +91,7 @@ pub fn scan_tokens(source: &str) -> Result<Vec<Token>, Vec<String>> {
                 }
             }
             '<' => {
-                let next = chars.peek();
-                if let Some((_, '=')) = next {
+                if let Some((_, '=')) = chars.peek() {
                     chars.next();
                     tokens.push(Token::LessEqual {
                         lexeme: &source[idx..idx + 2],
@@ -111,8 +107,7 @@ pub fn scan_tokens(source: &str) -> Result<Vec<Token>, Vec<String>> {
                 }
             }
             '>' => {
-                let next = chars.peek();
-                if let Some((_, '=')) = next {
+                if let Some((_, '=')) = chars.peek() {
                     chars.next();
                     tokens.push(Token::GreaterEqual {
                         lexeme: &source[idx..idx + 2],
@@ -127,6 +122,26 @@ pub fn scan_tokens(source: &str) -> Result<Vec<Token>, Vec<String>> {
                     });
                 }
             }
+            '/' => {
+                if let Some((_, '/')) = chars.peek() {
+                    while let Some((_, next)) = chars.peek() {
+                        if *next == '\n' {
+                            break;
+                        }
+                        chars.next();
+                    }
+                } else {
+                    tokens.push(Token::Slash {
+                        lexeme: &source[idx..idx + 1],
+                        literal: None,
+                        line,
+                    });
+                }
+            }
+            ' ' | '\r' | '\t' => {}
+            '\n' => {
+                line += 1;
+            }
 
             _ => errors.push(format!("Unexpected character: {} on line {}", c, line)),
         }
@@ -138,7 +153,7 @@ pub fn scan_tokens(source: &str) -> Result<Vec<Token>, Vec<String>> {
         line,
     });
 
-    if errors.len() > 0 {
+    if !errors.is_empty() {
         return Err(errors);
     }
     Ok(tokens)

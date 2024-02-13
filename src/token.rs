@@ -113,6 +113,91 @@ pub enum Token<'a> {
         literal: Option<f64>,
         line: usize,
     },
+    Identifier {
+        lexeme: &'a str,
+        literal: Option<&'a str>,
+        line: usize,
+    },
+    And {
+        lexeme: &'a str,
+        literal: Option<&'a str>,
+        line: usize,
+    },
+    Class {
+        lexeme: &'a str,
+        literal: Option<&'a str>,
+        line: usize,
+    },
+    Else {
+        lexeme: &'a str,
+        literal: Option<&'a str>,
+        line: usize,
+    },
+    False {
+        lexeme: &'a str,
+        literal: Option<&'a str>,
+        line: usize,
+    },
+    Fun {
+        lexeme: &'a str,
+        literal: Option<&'a str>,
+        line: usize,
+    },
+    For {
+        lexeme: &'a str,
+        literal: Option<&'a str>,
+        line: usize,
+    },
+    If {
+        lexeme: &'a str,
+        literal: Option<&'a str>,
+        line: usize,
+    },
+    Nil {
+        lexeme: &'a str,
+        literal: Option<&'a str>,
+        line: usize,
+    },
+    Or {
+        lexeme: &'a str,
+        literal: Option<&'a str>,
+        line: usize,
+    },
+    Print {
+        lexeme: &'a str,
+        literal: Option<&'a str>,
+        line: usize,
+    },
+    Return {
+        lexeme: &'a str,
+        literal: Option<&'a str>,
+        line: usize,
+    },
+    Super {
+        lexeme: &'a str,
+        literal: Option<&'a str>,
+        line: usize,
+    },
+    This {
+        lexeme: &'a str,
+        literal: Option<&'a str>,
+        line: usize,
+    },
+    True {
+        lexeme: &'a str,
+        literal: Option<&'a str>,
+        line: usize,
+    },
+    Var {
+        lexeme: &'a str,
+        literal: Option<&'a str>,
+        line: usize,
+    },
+    While {
+        lexeme: &'a str,
+        literal: Option<&'a str>,
+        line: usize,
+    },
     Eof {
         lexeme: &'a str,
         literal: Option<&'a str>,

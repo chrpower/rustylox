@@ -208,7 +208,106 @@ pub fn scan_tokens(source: &str) -> Result<Vec<Token>, Vec<String>> {
                     }
                 }
             }
+            c if c.is_ascii_alphabetic() => {
+                let mut end_idx = idx;
+                while let Some((next_idx, next_char)) = chars.peek() {
+                    if next_char.is_ascii_alphanumeric() {
+                        end_idx = *next_idx;
+                    } else {
+                        break;
+                    }
+                    chars.next();
+                }
 
+                let lexeme = &source[idx..=end_idx];
+                match lexeme {
+                    "and" => tokens.push(Token::And {
+                        lexeme,
+                        literal: None,
+                        line,
+                    }),
+                    "class" => tokens.push(Token::Class {
+                        lexeme,
+                        literal: None,
+                        line,
+                    }),
+                    "else" => tokens.push(Token::Else {
+                        lexeme,
+                        literal: None,
+                        line,
+                    }),
+                    "false" => tokens.push(Token::False {
+                        lexeme,
+                        literal: None,
+                        line,
+                    }),
+                    "for" => tokens.push(Token::For {
+                        lexeme,
+                        literal: None,
+                        line,
+                    }),
+                    "fun" => tokens.push(Token::Fun {
+                        lexeme,
+                        literal: None,
+                        line,
+                    }),
+                    "if" => tokens.push(Token::If {
+                        lexeme,
+                        literal: None,
+                        line,
+                    }),
+                    "nil" => tokens.push(Token::Nil {
+                        lexeme,
+                        literal: None,
+                        line,
+                    }),
+                    "or" => tokens.push(Token::Or {
+                        lexeme,
+                        literal: None,
+                        line,
+                    }),
+                    "print" => tokens.push(Token::Print {
+                        lexeme,
+                        literal: None,
+                        line,
+                    }),
+                    "return" => tokens.push(Token::Return {
+                        lexeme,
+                        literal: None,
+                        line,
+                    }),
+                    "super" => tokens.push(Token::Super {
+                        lexeme,
+                        literal: None,
+                        line,
+                    }),
+                    "this" => tokens.push(Token::This {
+                        lexeme,
+                        literal: None,
+                        line,
+                    }),
+                    "true" => tokens.push(Token::True {
+                        lexeme,
+                        literal: None,
+                        line,
+                    }),
+                    "var" => tokens.push(Token::Var {
+                        lexeme,
+                        literal: None,
+                        line,
+                    }),
+                    "while" => tokens.push(Token::While {
+                        lexeme,
+                        literal: None,
+                        line,
+                    }),
+                    _ => tokens.push(Token::Identifier {
+                        lexeme,
+                        literal: None,
+                        line,
+                    }),
+                }
+            }
             _ => errors.push(format!("Unexpected character: {} on line {}", c, line)),
         }
     }

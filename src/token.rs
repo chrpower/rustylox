@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Token<'a> {
     // Single-character tokens.
     LeftParen {
@@ -98,7 +98,21 @@ pub enum Token<'a> {
         literal: Option<&'a str>,
         line: usize,
     },
-
+    String {
+        lexeme: &'a str,
+        literal: Option<&'a str>,
+        line: usize,
+    },
+    Integer {
+        lexeme: &'a str,
+        literal: Option<i64>,
+        line: usize,
+    },
+    Float {
+        lexeme: &'a str,
+        literal: Option<f64>,
+        line: usize,
+    },
     Eof {
         lexeme: &'a str,
         literal: Option<&'a str>,

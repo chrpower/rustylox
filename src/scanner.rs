@@ -142,6 +142,72 @@ pub fn scan_tokens(source: &str) -> Result<Vec<Token>, Vec<String>> {
             '\n' => {
                 line += 1;
             }
+            '"' => {
+                let mut end_idx = idx;
+                let mut last_char = None;
+
+                while let Some((next_idx, next)) = chars.peek() {
+                    end_idx = *next_idx;
+                    last_char = Some(*next);
+                    if *next == '\n' {
+                        line += 1;
+                    }
+                    if *next == '"' {
+                        chars.next();
+                        break;
+                    }
+                    chars.next();
+                }
+
+                match last_char {
+                    Some('"') => {
+                        tokens.push(Token::String {
+                            lexeme: &source[idx..end_idx + 1],
+                            literal: Some(&source[idx + 1..end_idx]),
+                            line,
+                        });
+                    }
+                    _ => {
+                        errors.push(format!("Unterminated string on line {}", line));
+                    }
+                }
+            }
+            '0'..='9' => {
+                let mut end_idx = idx;
+                let mut contains_dot = false;
+                while let Some((next_idx, next_char)) = chars.peek() {
+                    match *next_char {
+                        '.' => {
+                            end_idx = *next_idx;
+                            contains_dot = true
+                        }
+                        c if c.is_ascii_digit() => end_idx = *next_idx,
+                        _ => break,
+                    }
+                    chars.next();
+                }
+
+                let lexeme = &source[idx..=end_idx];
+                if contains_dot {
+                    match lexeme.parse::<f64>() {
+                        Ok(num) => tokens.push(Token::Float {
+                            lexeme,
+                            literal: Some(num),
+                            line,
+                        }),
+                        Err(_) => errors.push(format!("Invalid float on line {}", line)),
+                    }
+                } else {
+                    match lexeme.parse::<i64>() {
+                        Ok(num) => tokens.push(Token::Integer {
+                            lexeme,
+                            literal: Some(num),
+                            line,
+                        }),
+                        Err(_) => errors.push(format!("Invalid integer on line {}", line)),
+                    }
+                }
+            }
 
             _ => errors.push(format!("Unexpected character: {} on line {}", c, line)),
         }
@@ -157,4 +223,115 @@ pub fn scan_tokens(source: &str) -> Result<Vec<Token>, Vec<String>> {
         return Err(errors);
     }
     Ok(tokens)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_simple_integer() {
+        let source = "123";
+        let tokens = scan_tokens(source).unwrap();
+        assert_eq!(tokens.len(), 2);
+        assert_eq!(
+            tokens[0],
+            Token::Integer {
+                lexeme: "123",
+                literal: Some(123),
+                line: 1,
+            }
+        );
+    }
+
+    #[test]
+    fn test_simple_float() {
+        let source = "123.456";
+        let tokens = scan_tokens(source).unwrap();
+        assert_eq!(tokens.len(), 2);
+        assert_eq!(
+            tokens[0],
+            Token::Float {
+                lexeme: "123.456",
+                literal: Some(123.456),
+                line: 1,
+            }
+        );
+    }
+
+    #[test]
+    fn test_negative_integer() {
+        let source = "-123";
+        let tokens = scan_tokens(source).unwrap();
+        assert_eq!(tokens.len(), 3);
+        assert_eq!(
+            tokens[0],
+            Token::Minus {
+                lexeme: "-",
+                literal: None,
+                line: 1,
+            }
+        );
+        assert_eq!(
+            tokens[1],
+            Token::Integer {
+                lexeme: "123",
+                literal: Some(123),
+                line: 1,
+            }
+        );
+    }
+
+    #[test]
+    fn test_negative_float() {
+        let source = "-123.456";
+        let tokens = scan_tokens(source).unwrap();
+        assert_eq!(tokens.len(), 3);
+        assert_eq!(
+            tokens[0],
+            Token::Minus {
+                lexeme: "-",
+                literal: None,
+                line: 1,
+            }
+        );
+        assert_eq!(
+            tokens[1],
+            Token::Float {
+                lexeme: "123.456",
+                literal: Some(123.456),
+                line: 1,
+            }
+        );
+    }
+
+    #[test]
+    fn test_leading_zeros_integer() {
+        let source = "007";
+        let tokens = scan_tokens(source).unwrap();
+        assert_eq!(tokens.len(), 2);
+        assert_eq!(
+            tokens[0],
+            Token::Integer {
+                lexeme: "007",
+                literal: Some(7),
+                line: 1,
+            }
+        );
+    }
+
+    #[test]
+    fn test_leading_zeros_float() {
+        let source = "0.007";
+        let tokens = scan_tokens(source).unwrap();
+        assert_eq!(tokens.len(), 2);
+        assert_eq!(
+            tokens[0],
+            Token::Float {
+                lexeme: "0.007",
+                literal: Some(0.007),
+                line: 1,
+            }
+        );
+    }
 }

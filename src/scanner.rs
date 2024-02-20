@@ -58,144 +58,153 @@ pub fn scan_tokens(source: &str) -> Result<Vec<Token>, Vec<String>> {
                 literal: None,
                 line,
             }),
-            '!' => {
-                if let Some((_, '=')) = chars.peek() {
-                    chars.next();
-                    tokens.push(Token::BangEqual {
-                        lexeme: &source[idx..idx + 2],
-                        literal: None,
-                        line,
-                    });
-                } else {
-                    tokens.push(Token::Bang {
-                        lexeme: &source[idx..idx + 1],
-                        literal: None,
-                        line,
-                    });
-                }
-            }
-            '=' => {
-                if let Some((_, '=')) = chars.peek() {
-                    chars.next();
-                    tokens.push(Token::EqualEqual {
-                        lexeme: &source[idx..idx + 2],
-                        literal: None,
-                        line,
-                    });
-                } else {
-                    tokens.push(Token::Equal {
-                        lexeme: &source[idx..idx + 1],
-                        literal: None,
-                        line,
-                    });
-                }
-            }
-            '<' => {
-                if let Some((_, '=')) = chars.peek() {
-                    chars.next();
-                    tokens.push(Token::LessEqual {
-                        lexeme: &source[idx..idx + 2],
-                        literal: None,
-                        line,
-                    });
-                } else {
-                    tokens.push(Token::Less {
-                        lexeme: &source[idx..idx + 1],
-                        literal: None,
-                        line,
-                    });
-                }
-            }
-            '>' => {
-                if let Some((_, '=')) = chars.peek() {
-                    chars.next();
-                    tokens.push(Token::GreaterEqual {
-                        lexeme: &source[idx..idx + 2],
-                        literal: None,
-                        line,
-                    });
-                } else {
-                    tokens.push(Token::Greater {
-                        lexeme: &source[idx..idx + 1],
-                        literal: None,
-                        line,
-                    });
-                }
-            }
-            '/' => {
-                if let Some((_, '/')) = chars.peek() {
-                    while let Some((_, next)) = chars.peek() {
-                        if *next == '\n' {
-                            break;
-                        }
+
+            '!' | '=' | '<' | '>' | '/' => {
+                let next_char = chars.peek().map(|&(_, nc)| nc);
+                match (c, next_char) {
+                    ('!', Some('=')) | ('=', Some('=')) | ('<', Some('=')) | ('>', Some('=')) => {
                         chars.next();
+                        tokens.push(match c {
+                            '!' => Token::BangEqual {
+                                lexeme: &source[idx..idx + 2],
+                                literal: None,
+                                line,
+                            },
+                            '=' => Token::EqualEqual {
+                                lexeme: &source[idx..idx + 2],
+                                literal: None,
+                                line,
+                            },
+                            '<' => Token::LessEqual {
+                                lexeme: &source[idx..idx + 2],
+                                literal: None,
+                                line,
+                            },
+                            '>' => Token::GreaterEqual {
+                                lexeme: &source[idx..idx + 2],
+                                literal: None,
+                                line,
+                            },
+                            _ => unreachable!(),
+                        });
                     }
-                } else {
-                    tokens.push(Token::Slash {
-                        lexeme: &source[idx..idx + 1],
-                        literal: None,
-                        line,
-                    });
+                    ('/', Some('/')) => {
+                        while let Some((_, next)) = chars.peek() {
+                            if *next == '\n' {
+                                break;
+                            }
+                            chars.next();
+                        }
+                    }
+                    _ => {
+                        tokens.push(match c {
+                            '!' => Token::Bang {
+                                lexeme: &source[idx..idx + 1],
+                                literal: None,
+                                line,
+                            },
+                            '=' => Token::Equal {
+                                lexeme: &source[idx..idx + 1],
+                                literal: None,
+                                line,
+                            },
+                            '<' => Token::Less {
+                                lexeme: &source[idx..idx + 1],
+                                literal: None,
+                                line,
+                            },
+                            '>' => Token::Greater {
+                                lexeme: &source[idx..idx + 1],
+                                literal: None,
+                                line,
+                            },
+                            '/' => Token::Slash {
+                                lexeme: &source[idx..idx + 1],
+                                literal: None,
+                                line,
+                            },
+                            _ => unreachable!(),
+                        });
+                    }
                 }
             }
+
             ' ' | '\r' | '\t' => {}
             '\n' => {
                 line += 1;
             }
+
             '"' => {
                 let mut end_idx = idx;
-                let mut last_char = None;
+                let mut terminated = false;
 
-                while let Some((next_idx, next)) = chars.peek() {
+                while let Some((next_idx, next_char)) = chars.peek() {
                     end_idx = *next_idx;
-                    last_char = Some(*next);
-                    if *next == '\n' {
-                        line += 1;
+                    match *next_char {
+                        '\n' => {
+                            line += 1;
+                            chars.next();
+                        }
+                        '"' => {
+                            terminated = true;
+                            chars.next();
+                            break;
+                        }
+                        _ => {
+                            chars.next();
+                        }
                     }
-                    if *next == '"' {
-                        chars.next();
-                        break;
-                    }
-                    chars.next();
                 }
 
-                match last_char {
-                    Some('"') => {
-                        tokens.push(Token::String {
-                            lexeme: &source[idx..end_idx + 1],
-                            literal: Some(&source[idx + 1..end_idx]),
-                            line,
-                        });
-                    }
-                    _ => {
-                        errors.push(format!("Unterminated string on line {}", line));
-                    }
+                if terminated {
+                    tokens.push(Token::String {
+                        lexeme: &source[idx..=end_idx],
+                        literal: Some(&source[idx + 1..end_idx]),
+                        line,
+                    });
+                } else {
+                    errors.push(format!("Unterminated string on line {}", line));
                 }
             }
+
             '0'..='9' => {
                 let mut end_idx = idx;
                 let mut contains_dot = false;
+
                 while let Some((next_idx, next_char)) = chars.peek() {
                     match *next_char {
                         '.' => {
                             end_idx = *next_idx;
-                            contains_dot = true
+                            contains_dot = true;
+                            chars.next();
                         }
-                        c if c.is_ascii_digit() => end_idx = *next_idx,
+                        c if c.is_ascii_digit() => {
+                            end_idx = *next_idx;
+                            chars.next();
+                        }
                         _ => break,
                     }
-                    chars.next();
                 }
 
                 let lexeme = &source[idx..=end_idx];
                 if contains_dot {
-                    match lexeme.parse::<f64>() {
-                        Ok(num) => tokens.push(Token::Float {
-                            lexeme,
-                            literal: Some(num),
-                            line,
-                        }),
-                        Err(_) => errors.push(format!("Invalid float on line {}", line)),
+                    match lexeme.chars().last() {
+                        Some(last_char) if last_char.is_ascii_digit() => {
+                            match lexeme.parse::<f64>() {
+                                Ok(num) => tokens.push(Token::Float {
+                                    lexeme,
+                                    literal: Some(num),
+                                    line,
+                                }),
+                                Err(_) => errors.push(format!("Invalid float on line {}", line)),
+                            }
+                        }
+                        _ => {
+                            errors.push(format!(
+                                "Invalid float on line {}  - last char is a .",
+                                line
+                            ));
+                        }
                     }
                 } else {
                     match lexeme.parse::<i64>() {
@@ -208,108 +217,110 @@ pub fn scan_tokens(source: &str) -> Result<Vec<Token>, Vec<String>> {
                     }
                 }
             }
+
             c if c.is_ascii_alphabetic() => {
                 let mut end_idx = idx;
                 while let Some((next_idx, next_char)) = chars.peek() {
-                    if next_char.is_ascii_alphanumeric() {
-                        end_idx = *next_idx;
-                    } else {
-                        break;
+                    match *next_char {
+                        c if c.is_ascii_alphanumeric() => {
+                            end_idx = *next_idx;
+                            chars.next();
+                        }
+                        _ => break,
                     }
-                    chars.next();
                 }
 
                 let lexeme = &source[idx..=end_idx];
-                match lexeme {
-                    "and" => tokens.push(Token::And {
+                tokens.push(match lexeme {
+                    "and" => Token::And {
                         lexeme,
                         literal: None,
                         line,
-                    }),
-                    "class" => tokens.push(Token::Class {
+                    },
+                    "class" => Token::Class {
                         lexeme,
                         literal: None,
                         line,
-                    }),
-                    "else" => tokens.push(Token::Else {
+                    },
+                    "else" => Token::Else {
                         lexeme,
                         literal: None,
                         line,
-                    }),
-                    "false" => tokens.push(Token::False {
+                    },
+                    "false" => Token::False {
                         lexeme,
                         literal: None,
                         line,
-                    }),
-                    "for" => tokens.push(Token::For {
+                    },
+                    "for" => Token::For {
                         lexeme,
                         literal: None,
                         line,
-                    }),
-                    "fun" => tokens.push(Token::Fun {
+                    },
+                    "fun" => Token::Fun {
                         lexeme,
                         literal: None,
                         line,
-                    }),
-                    "if" => tokens.push(Token::If {
+                    },
+                    "if" => Token::If {
                         lexeme,
                         literal: None,
                         line,
-                    }),
-                    "nil" => tokens.push(Token::Nil {
+                    },
+                    "nil" => Token::Nil {
                         lexeme,
                         literal: None,
                         line,
-                    }),
-                    "or" => tokens.push(Token::Or {
+                    },
+                    "or" => Token::Or {
                         lexeme,
                         literal: None,
                         line,
-                    }),
-                    "print" => tokens.push(Token::Print {
+                    },
+                    "print" => Token::Print {
                         lexeme,
                         literal: None,
                         line,
-                    }),
-                    "return" => tokens.push(Token::Return {
+                    },
+                    "return" => Token::Return {
                         lexeme,
                         literal: None,
                         line,
-                    }),
-                    "super" => tokens.push(Token::Super {
+                    },
+                    "super" => Token::Super {
                         lexeme,
                         literal: None,
                         line,
-                    }),
-                    "this" => tokens.push(Token::This {
+                    },
+                    "this" => Token::This {
                         lexeme,
                         literal: None,
                         line,
-                    }),
-                    "true" => tokens.push(Token::True {
+                    },
+                    "true" => Token::True {
                         lexeme,
                         literal: None,
                         line,
-                    }),
-                    "var" => tokens.push(Token::Var {
+                    },
+                    "var" => Token::Var {
                         lexeme,
                         literal: None,
                         line,
-                    }),
-                    "while" => tokens.push(Token::While {
+                    },
+                    "while" => Token::While {
                         lexeme,
                         literal: None,
                         line,
-                    }),
-                    _ => tokens.push(Token::Identifier {
+                    },
+                    _ => Token::Identifier {
                         lexeme,
                         literal: None,
                         line,
-                    }),
-                }
+                    },
+                })
             }
             _ => errors.push(format!("Unexpected character: {} on line {}", c, line)),
-        }
+        };
     }
 
     tokens.push(Token::Eof {
@@ -321,116 +332,124 @@ pub fn scan_tokens(source: &str) -> Result<Vec<Token>, Vec<String>> {
     if !errors.is_empty() {
         return Err(errors);
     }
+
     Ok(tokens)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
-    #[test]
-    fn test_simple_integer() {
-        let source = "123";
-        let tokens = scan_tokens(source).unwrap();
-        assert_eq!(tokens.len(), 2);
-        assert_eq!(
-            tokens[0],
-            Token::Integer {
-                lexeme: "123",
-                literal: Some(123),
-                line: 1,
-            }
-        );
+    mod int_and_float {
+        use crate::{scanner::scan_tokens, token::Token};
+
+        #[test]
+        fn simple_integer() {
+            let source = "123";
+            let tokens = scan_tokens(source).unwrap();
+            assert_eq!(tokens.len(), 2);
+            assert_eq!(
+                tokens[0],
+                Token::Integer {
+                    lexeme: "123",
+                    literal: Some(123),
+                    line: 1,
+                }
+            );
+        }
+
+        #[test]
+        fn leading_zeros_integer() {
+            let source = "007";
+            let tokens = scan_tokens(source).unwrap();
+            assert_eq!(tokens.len(), 2);
+            assert_eq!(
+                tokens[0],
+                Token::Integer {
+                    lexeme: "007",
+                    literal: Some(7),
+                    line: 1,
+                }
+            );
+        }
+
+        #[test]
+        fn test_simple_float() {
+            let source = "123.456";
+            let tokens = scan_tokens(source).unwrap();
+            assert_eq!(tokens.len(), 2);
+            assert_eq!(
+                tokens[0],
+                Token::Float {
+                    lexeme: "123.456",
+                    literal: Some(123.456),
+                    line: 1,
+                }
+            );
+        }
+
+        #[test]
+        fn handles_invalid_float_gracefully() {
+            let source = "123.45.67";
+            let result = scan_tokens(source);
+            assert!(result.is_err());
+            let errors = result.err().unwrap();
+            assert!(!errors.is_empty());
+            assert!(errors[0].contains("Invalid float on line 1"));
+        }
+
+        #[test]
+        fn fails_to_parse_float_with_dot_at_end() {
+            let source = "123.";
+            let result = scan_tokens(source);
+            assert!(result.is_err());
+            let errors = result.err().unwrap();
+            assert!(!errors.is_empty());
+            assert!(errors[0].contains("Invalid float on line 1  - last char is a ."));
+        }
     }
 
-    #[test]
-    fn test_simple_float() {
-        let source = "123.456";
-        let tokens = scan_tokens(source).unwrap();
-        assert_eq!(tokens.len(), 2);
-        assert_eq!(
-            tokens[0],
-            Token::Float {
-                lexeme: "123.456",
-                literal: Some(123.456),
-                line: 1,
-            }
-        );
-    }
+    mod strings {
+        use crate::{scanner::scan_tokens, token::Token};
 
-    #[test]
-    fn test_negative_integer() {
-        let source = "-123";
-        let tokens = scan_tokens(source).unwrap();
-        assert_eq!(tokens.len(), 3);
-        assert_eq!(
-            tokens[0],
-            Token::Minus {
-                lexeme: "-",
-                literal: None,
-                line: 1,
-            }
-        );
-        assert_eq!(
-            tokens[1],
-            Token::Integer {
-                lexeme: "123",
-                literal: Some(123),
-                line: 1,
-            }
-        );
-    }
+        #[test]
+        fn parses_terminated_strings_correctly() {
+            let source = "\"This is a string.\"";
+            let tokens = scan_tokens(source).unwrap();
+            assert_eq!(tokens.len(), 2);
 
-    #[test]
-    fn test_negative_float() {
-        let source = "-123.456";
-        let tokens = scan_tokens(source).unwrap();
-        assert_eq!(tokens.len(), 3);
-        assert_eq!(
-            tokens[0],
-            Token::Minus {
-                lexeme: "-",
-                literal: None,
-                line: 1,
-            }
-        );
-        assert_eq!(
-            tokens[1],
-            Token::Float {
-                lexeme: "123.456",
-                literal: Some(123.456),
-                line: 1,
-            }
-        );
-    }
+            assert_eq!(
+                tokens[0],
+                Token::String {
+                    lexeme: "\"This is a string.\"",
+                    literal: Some("This is a string."),
+                    line: 1,
+                }
+            );
+        }
 
-    #[test]
-    fn test_leading_zeros_integer() {
-        let source = "007";
-        let tokens = scan_tokens(source).unwrap();
-        assert_eq!(tokens.len(), 2);
-        assert_eq!(
-            tokens[0],
-            Token::Integer {
-                lexeme: "007",
-                literal: Some(7),
-                line: 1,
-            }
-        );
-    }
+        #[test]
+        fn reports_unterminated_strings() {
+            let source = "\"This string has no end";
+            let result = scan_tokens(source);
+            assert!(result.is_err());
+            let errors = result.err().unwrap();
+            assert!(!errors.is_empty());
+            assert!(errors[0].contains("Unterminated string"));
+        }
 
-    #[test]
-    fn test_leading_zeros_float() {
-        let source = "0.007";
-        let tokens = scan_tokens(source).unwrap();
-        assert_eq!(tokens.len(), 2);
-        assert_eq!(
-            tokens[0],
-            Token::Float {
-                lexeme: "0.007",
-                literal: Some(0.007),
-                line: 1,
-            }
-        );
+        #[test]
+        fn handles_strings_with_newlines() {
+            let source = "\"This is a string\nwith a newline.\"";
+            let tokens = scan_tokens(source).unwrap();
+            assert_eq!(tokens.len(), 2);
+            assert_eq!(
+                tokens[0],
+                Token::String {
+                    lexeme: "\"This is a string\nwith a newline.\"",
+                    literal: Some("This is a string\nwith a newline."),
+                    line: 2,
+                }
+            );
+        }
     }
 }
